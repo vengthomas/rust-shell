@@ -7,7 +7,7 @@ use crate::cli::interaction::{Interaction, UserInput};
 use crate::cli::terminal_interaction::TerminalInteraction;
 use crate::command::builtin::exit_shell;
 use crate::command::{IoContext};
-use crate::parsing::{convert_to_command};
+use crate::command_analysis::convert_to_command;
 
 pub fn run_cli() {
 
