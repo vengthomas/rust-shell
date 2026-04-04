@@ -2,7 +2,7 @@
 ![rust](https://img.shields.io/badge/Rust-444444?logo=rust&logoColor=red)
 ![Last Commit](https://img.shields.io/github/last-commit/spaghetoz/rust-shell)
 
-### A basic unix shell made with Rust
+### A basic Unix shell implemented in Rust, created as a learning project to explore Rust’s memory safety compared to C.
 
 <br>
 
