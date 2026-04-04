@@ -23,6 +23,7 @@ pub fn parse(tokens: &[Token]) -> Result<Command, ParsingError> {
             Token::Separator => return create_separator_command(&visited_tokens, right_tokens),
             Token::Or => return create_logical_command(&visited_tokens, right_tokens, |l, r| Command::LogicalOr { left: l, right: r }),
             Token::And => return create_logical_command(&visited_tokens, right_tokens,  |l, r| Command::LogicalAnd { left: l, right: r }),
+            Token::BackgroundOp => return create_background_command(&visited_tokens)
         }   
     }
 
@@ -86,6 +87,13 @@ fn create_logical_command(left_tokens: &[Token], right_tokens: &[Token], op: imp
         Box::new(parse(left_tokens)?),
         Box::new(parse(right_tokens)?),
     ))
+}
+
+fn create_background_command(left_tokens: &[Token]) -> Result<Command, ParsingError> {
+    Ok(
+        // TODO do not ignore right side of the command, for ex. cmd1 & cmd2 should also execute cmd2 rather than ignoring it
+        Command::Background { command: Box::new(parse(left_tokens)?) }  
+    )
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -281,8 +289,21 @@ mod tests {
         assert_eq!(expected, result);
     }
 
+    #[test]
+    fn test_background_command() {
+        let input = "ls -l&".to_string();
+        let result = convert_to_command(&input).unwrap();
+
+        let expected = Command::Background { 
+            command: Box::new(Command::Simple { 
+                cmd_path: "ls".to_string(),
+                cmd_args: vec!["-l".to_string()],
+            })
+        };
+        assert_eq!(expected, result);
+    }
+
     // TODO test cases that should raise an error
     // TODO when implemented, test redirection before a pipe : cat < input.txt | head
-    // TODO when implemented, test sticked pipe or redirection : echo hello|cat or echo hello>test.txt
 
 }

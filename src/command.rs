@@ -38,6 +38,10 @@ pub enum Command {
     LogicalAnd { // &&
         left: Box<Command>,
         right: Box<Command>,
+    },
+    // A command executed in background job
+    Background { // cmd &
+        command: Box<Command>
     }
 }
 

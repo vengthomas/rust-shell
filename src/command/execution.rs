@@ -62,6 +62,9 @@ impl Command {
             },
             Command::LogicalAnd { left, right } => {
                 execute_logical_op_command(left, right, io_context, false)
+            },
+            Command::Background { command } => {
+                todo!()
             }
             
         }

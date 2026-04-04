@@ -23,6 +23,9 @@ pub enum Token {
     #[token("&&")]
     And,
 
+    #[token("&")]
+    BackgroundOp, // the background operator
+
     #[token("||")]
     Or,
 
