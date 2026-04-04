@@ -56,5 +56,6 @@ $ /home/folder> exit
 - Commands chaining (; && ||)
 - Pipes chaining
 - Enriched line editing and history thanks to the [Rusty lines](https://github.com/kkawakam/rustyline) library
+- Simple background command with & (example: sleep 2 ; ls > test.txt &)
 
 ### How to use : `cargo run` 

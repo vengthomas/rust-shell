@@ -64,7 +64,7 @@ impl Command {
                 execute_logical_op_command(left, right, io_context, false)
             },
             Command::Background { command } => {
-                todo!()
+                execute_background_command(command, io_context)
             }
             
         }
@@ -214,6 +214,10 @@ fn execute_logical_op_command(left_cmd: &Command, right_cmd: &Command, io_contex
     Ok(None)
 }
 
+fn execute_background_command(command: &Command, io_context: IoContext) -> Result<Option<Child>, ExecutionError>  {
+    command.execute_recursive(io_context)?;
+    Ok(None)    // TODO wait without blocking to avoid zombie processes
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ExecutionError {
