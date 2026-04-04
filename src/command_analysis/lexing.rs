@@ -43,8 +43,8 @@ pub fn tokenize_input(input: &str) -> Vec<Token> {
 
     let mut tokens: Vec<Token> = Vec::new();
 
-    let mut lexer = Token::lexer(input);
-    while let Some(result_token) = lexer.next() {
+    let lexer = Token::lexer(input);
+    for result_token in lexer {
         //println!("{:?} {:?}", result_token, lexer.slice());
         tokens.push(result_token.unwrap()); // TODO do not unwrap and handle error
     }
@@ -52,14 +52,7 @@ pub fn tokenize_input(input: &str) -> Vec<Token> {
     tokens
 }
 
-
-#[derive(thiserror::Error, Debug)]
-pub enum LexingError {
-
-    #[error("Unexpected token: {0}")]
-    UnknownToken(String),
-}
-
+// TODO custom error struct
 
 #[cfg(test)]
 mod tests {

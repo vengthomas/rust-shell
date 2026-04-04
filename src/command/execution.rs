@@ -181,11 +181,7 @@ fn execute_logical_op_command(left_cmd: &Command, right_cmd: &Command, io_contex
     let is_left_success : bool = match left {
         Ok(Some(mut child)) => {
             let status = child.wait()?;
-            if status.success() {
-                true
-            } else {
-                false
-            }
+            status.success()
         },
         Err(err) => {
             eprintln!("{err}");
