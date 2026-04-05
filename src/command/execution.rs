@@ -2,10 +2,10 @@
 //! 
 //! 
 
-use std::{error::Error, ffi::{CStr, CString}, ptr};
+use std::{error::Error, ffi::{CStr, CString}};
 
-use crate::command::Command;
-use nix::{sys::wait::waitpid, unistd::{ForkResult, fork,execvp}};
+use crate::command::{Command, RedirectionType};
+use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::waitpid}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork}};
 
 impl Command {
 
@@ -38,7 +38,8 @@ impl Command {
                 Ok(())
             },
             Command::Redirection { kind, command, file } => {
-                todo!()
+                execute_redirection_command(kind, command, file)?;
+                Ok(())
             },
             Command::Pipe { left, right } => {
                 todo!()
@@ -81,6 +82,29 @@ fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box
     execvp(&cmd, &argv)?;
 
     Ok(())   
+}
+
+fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_path: &str) -> Result<(), Box<dyn Error>> {
+
+    // Select the options creation/read depending on the kind 
+    let open_flags= match kind {
+        RedirectionType::In => OFlag::O_RDONLY,
+        RedirectionType::Out | RedirectionType::Err => OFlag::O_TRUNC | OFlag::O_CREAT | OFlag::O_WRONLY,
+        RedirectionType::Append => OFlag::O_WRONLY | OFlag::O_CREAT | OFlag::O_APPEND
+    };
+
+    let fd = open(file_path, open_flags, Mode::from_bits(0o644).unwrap())?; // todo maybe avoid unwrap
+
+    match kind {
+        RedirectionType::In => dup2_stdin(fd)?,
+        RedirectionType::Out |  RedirectionType::Append => dup2_stdout(fd)?,
+        RedirectionType::Err => dup2_stderr(fd)?
+    };
+    
+    // Then execute the command with redirected input or output
+    command.execute_recursive()?;
+
+    Ok(())
 }
 
 /*impl Command {
