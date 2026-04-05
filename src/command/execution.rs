@@ -5,7 +5,7 @@
 use std::{error::Error, ffi::{CStr, CString}};
 
 use crate::command::{Command, RedirectionType};
-use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::waitpid}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork}};
+use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::waitpid}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
 
 impl Command {
 
@@ -14,6 +14,7 @@ impl Command {
     /// 
     pub fn execute(&self)-> Result<(), Box<dyn Error>> {  // todo properly handle err
 
+        // TODO fork only if it's not a builtin, or pipe etc..
         match unsafe { fork() } {
             Ok(ForkResult::Parent { child }) => {
                 waitpid(child, None)?;  
@@ -42,7 +43,8 @@ impl Command {
                 Ok(())
             },
             Command::Pipe { left, right } => {
-                todo!()
+                execute_pipe_command(left, right)?;
+                Ok(())
             },
             Command::Separator { left, right } => {
                 todo!()
@@ -62,7 +64,7 @@ impl Command {
 
 }
 
-/// Executes a simple command by creating a child process.
+/// Executes a simple command by REPLACING the current process.
 /// This function does not executes built-in commands (such as pwd or cd)
 fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {  
 
@@ -87,13 +89,13 @@ fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box
 fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_path: &str) -> Result<(), Box<dyn Error>> {
 
     // Select the options creation/read depending on the kind 
-    let open_flags= match kind {
+    let open_flags = match kind {
         RedirectionType::In => OFlag::O_RDONLY,
         RedirectionType::Out | RedirectionType::Err => OFlag::O_TRUNC | OFlag::O_CREAT | OFlag::O_WRONLY,
         RedirectionType::Append => OFlag::O_WRONLY | OFlag::O_CREAT | OFlag::O_APPEND
     };
 
-    let fd = open(file_path, open_flags, Mode::from_bits(0o644).unwrap())?; // todo maybe avoid unwrap
+    let fd = open(file_path, open_flags, Mode::from_bits(0o644).unwrap())?; // TODO maybe avoid unwrap
 
     match kind {
         RedirectionType::In => dup2_stdin(fd)?,
@@ -103,6 +105,29 @@ fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_p
     
     // Then execute the command with redirected input or output
     command.execute_recursive()?;
+
+    Ok(())
+}
+
+fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), Box<dyn Error>> {
+
+    let (pipe_fd_read, pipe_fd_write) = pipe()?;
+
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            
+            dup2_stdout(pipe_fd_write)?;
+
+            left_cmd.execute_recursive()?;
+            waitpid(child, None)?;  
+        }
+        Ok(ForkResult::Child) => {
+            dup2_stdin(pipe_fd_read)?;
+            // TODO make sure to wait for the parent for dup2  
+            right_cmd.execute_recursive()?;
+        }
+        Err(_) => println!("Pipe fork failed"),
+    }
 
     Ok(())
 }
