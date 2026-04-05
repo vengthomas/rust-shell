@@ -47,7 +47,8 @@ impl Command {
                 Ok(())
             },
             Command::Separator { left, right } => {
-                todo!()
+                execute_separator_command(left, right)?;
+                Ok(())
             },
             Command::LogicalOr { left, right } => {
                 todo!()
@@ -127,6 +128,26 @@ fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), B
             right_cmd.execute_recursive()?;
         }
         Err(_) => println!("Pipe fork failed"),
+    }
+
+    Ok(())
+}
+
+fn execute_separator_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), Box<dyn Error>> {
+    
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            waitpid(child, None)?;
+            right_cmd.execute_recursive()?;
+        }
+        Ok(ForkResult::Child) => {
+            if let Err(err) = left_cmd.execute_recursive() {
+                eprintln!("Child error: {:?}", err);
+                std::process::exit(1); 
+            }
+            std::process::exit(0);
+        }
+        Err(_) => return Err("Pipe in separator failed".into()),
     }
 
     Ok(())
