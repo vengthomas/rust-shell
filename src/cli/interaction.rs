@@ -9,6 +9,7 @@ use std::{error::Error};
 pub trait Interaction {
     fn receive_input(&mut self) -> Result<UserInput, Box<dyn Error>>;
     fn save_history(&mut self) -> Result<(), Box<dyn Error>>;
+    fn prompt_string(&self) -> String;
 }
 
 /// Represents what a user input could be, it could be just a string, or an action 

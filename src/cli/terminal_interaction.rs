@@ -37,21 +37,6 @@ impl TerminalInteraction {
             history_path: temp_path
         })
     }
-        
-    /// Returns the prefix on the left of the user input with the following format: `$ currentdirectory>`
-    /// 
-    fn get_prompt_string(&self) -> String {
-
-        let mut prompt_string = String::new();
-        
-        let working_dir = get_working_directory()
-            .unwrap_or_else(|_| String::from("unknown"));
-
-        // pretty colored shell prompt
-        prompt_string.push_str(&format!("$ \x1b[1;34m{}\x1b[0m> ", working_dir));
-        
-        prompt_string
-    }
 
 }
 
@@ -63,7 +48,7 @@ impl Interaction for TerminalInteraction {
     fn receive_input(&mut self) -> Result<UserInput, Box<dyn Error>> {
 
         // side effect: also prints the prompt string
-        let readline = self.rusty_lines_editor.readline(&self.get_prompt_string());
+        let readline = self.rusty_lines_editor.readline(&self.prompt_string());
         match readline {
             // do nothing if the string is empty or is a bunch of spaces
             Ok(s) if s.trim().is_empty() => {
@@ -92,5 +77,16 @@ impl Interaction for TerminalInteraction {
     fn save_history(&mut self) -> Result<(), Box<dyn Error>> {
         self.rusty_lines_editor.save_history(&self.history_path)?;
         Ok(())
+    }
+
+    /// Returns the prefix on the left of the user input with the following format: `$ currentdirectory>`
+    /// 
+    fn prompt_string(&self) -> String {
+
+        let working_dir = get_working_directory()
+            .unwrap_or_else(|_| String::from("unknown"));
+
+        // pretty colored shell prompt
+        format!("$ \x1b[1;34m{}\x1b[0m> ", working_dir)
     }
 }
