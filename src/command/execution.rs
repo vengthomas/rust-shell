@@ -2,14 +2,88 @@
 //! 
 //! 
 
-use std::process::{Child, Stdio};
-use std::fs::OpenOptions;
+use std::{error::Error, ffi::{CStr, CString}, ptr};
 
-use crate::command::builtin::execution::try_execute_builtin;
-use crate::command::{IoContext, RedirectionType};
 use crate::command::Command;
+use nix::{sys::wait::waitpid, unistd::{ForkResult, fork,execvp}};
 
 impl Command {
+
+    /// Executes the command
+    /// 
+    /// 
+    pub fn execute(&self)-> Result<(), Box<dyn Error>> {  // todo properly handle err
+
+        match unsafe { fork() } {
+            Ok(ForkResult::Parent { child }) => {
+                waitpid(child, None)?;  
+            }
+            Ok(ForkResult::Child) => {
+                self.execute_recursive()?;
+            }
+            Err(_) => println!("Fork failed"),
+        }
+
+        Ok(())
+    }
+    
+    fn execute_recursive(&self) -> Result<(), Box<dyn Error>>{
+        
+        match self {
+            Command::Simple{cmd_path, cmd_args} => {
+
+                // TODO builtin command
+
+                execute_simple_command(cmd_path, cmd_args)?;
+                Ok(())
+            },
+            Command::Redirection { kind, command, file } => {
+                todo!()
+            },
+            Command::Pipe { left, right } => {
+                todo!()
+            },
+            Command::Separator { left, right } => {
+                todo!()
+            },
+            Command::LogicalOr { left, right } => {
+                todo!()
+            },
+            Command::LogicalAnd { left, right } => {
+                todo!()
+            },
+            Command::Background { command } => {
+                todo!()
+            }
+            
+        }
+    }
+
+}
+
+/// Executes a simple command by creating a child process.
+/// This function does not executes built-in commands (such as pwd or cd)
+fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {  
+
+    // TODO less chaotic conversions 
+    let cmd = CString::new(cmd_path)?;
+
+    let mut args: Vec<CString> = Vec::with_capacity(cmd_args.len() + 1);
+    args.push(cmd.clone()); // argv[0]
+
+    for arg in cmd_args {
+        args.push(CString::new(arg.as_str())?);
+    }
+
+    // convert to &[&CStr]
+    let argv: Vec<&CStr> = args.iter().map(|c| c.as_c_str()).collect();
+
+    execvp(&cmd, &argv)?;
+
+    Ok(())   
+}
+
+/*impl Command {
 
     /// Executes the command and waits for it to complete if necessary.
     /// 
@@ -213,7 +287,7 @@ fn execute_logical_op_command(left_cmd: &Command, right_cmd: &Command, io_contex
 fn execute_background_command(command: &Command, io_context: IoContext) -> Result<Option<Child>, ExecutionError>  {
     command.execute_recursive(io_context)?;
     Ok(None)    // TODO wait without blocking to avoid zombie processes
-}
+}*/
 
 #[derive(thiserror::Error, Debug)]
 pub enum ExecutionError {
