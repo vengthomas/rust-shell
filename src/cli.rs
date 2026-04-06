@@ -6,15 +6,14 @@ mod terminal_interaction;
 use crate::cli::interaction::{Interaction, UserInput};
 use crate::cli::terminal_interaction::TerminalInteraction;
 use crate::command::builtin::exit_shell;
+use crate::command::jobs::JobsManager;
 use crate::command_analysis::convert_to_command;
 
-use nix::sys::wait::{WaitPidFlag, WaitStatus};
-use nix::unistd::Pid;
-use nix::{sys::{wait::{waitpid}}};
 
 pub fn run_cli() {
 
     let mut terminal = TerminalInteraction::try_new().expect("error terminal interaction creation");
+    let mut jobs_manager = JobsManager::new();
 
     println!(" ____            _     ____  _          _ _ ");
     println!("|  _ \\ _   _ ___| |_  / ___|| |__   ___| | |");
@@ -23,14 +22,14 @@ pub fn run_cli() {
     println!("|_| \\_\\\\__,_|___/\\__| |____/|_| |_|\\___|_|_|\n");
 
     loop {
-        if let Err(err) = cli_loop_step(&mut terminal) {
+        if let Err(err) = cli_loop_step(&mut terminal, &mut jobs_manager) {
             println!("{err}");
         }
     }
 }
 
 /// Processes a single step on a loop
-pub fn cli_loop_step(terminal: &mut dyn Interaction) -> Result<(), Box<dyn Error>>{
+pub fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>>{
 
     let user_input = terminal.receive_input()
         // Propagate the error by specifying it is a user input error
@@ -53,14 +52,7 @@ pub fn cli_loop_step(terminal: &mut dyn Interaction) -> Result<(), Box<dyn Error
         },
     }
 
-    // TODO manage zombies in jobs manager
-    match waitpid(Pid::from_raw(-1), Some(WaitPidFlag::WNOHANG)) {
-        Ok(WaitStatus::Exited(_, _)) => (),
-        Ok(WaitStatus::Signaled(_, _, _)) => (),
-        Ok(WaitStatus::StillAlive) => (),
-        Err(_) => (),
-        _ => (),
-    }
+    jobs_manager.clean_done_jobs();
 
     Ok(())
 }

@@ -5,6 +5,7 @@
 
 pub mod execution;
 pub mod builtin;
+pub mod jobs;
 
 /// Represents a command executable by a shell.
 /// 
