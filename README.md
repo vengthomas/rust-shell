@@ -2,7 +2,7 @@
 ![rust](https://img.shields.io/badge/Rust-444444?logo=rust&logoColor=red)
 ![Last Commit](https://img.shields.io/github/last-commit/spaghetoz/rust-shell)
 
-### A basic Unix shell implemented in Rust, created as a learning project to explore Rust’s memory safety compared to C.
+A basic Unix shell implemented in Rust, created as a learning project to explore Rust’s code organisation and memory safety compared to C.
 
 <br>
 
@@ -59,3 +59,16 @@ $ /home/folder> exit
 - Simple background command with & (example: sleep 2 ; ls > test.txt &)
 
 ### How to use : `cargo run` 
+
+### Third party libraries
+
+- `Logos` for lexing
+- `Nix` for advanced commands execution
+
+### Next features 
+
+- [ ] Jobs management  (fd, bg, jobs)
+- [ ] Signal handling for running commands
+- [ ] Environment variables  (echo, $PATH, $?, $VAR etc..)
+- [ ] Prompt string with git infos
+- [ ] Command auto-completion and suggestion
