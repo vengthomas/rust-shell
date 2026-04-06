@@ -2,10 +2,10 @@
 //! 
 //! 
 
-use std::{error::Error, ffi::{CStr, CString}};
+use std::{error::Error, ffi::{CStr, CString}, io::{stdin, stdout, stderr}, os::fd::AsFd};
 
 use crate::command::{Command, RedirectionType, builtin::execution::try_execute_builtin};
-use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
+use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
 
 impl Command {
 
@@ -14,16 +14,17 @@ impl Command {
     /// 
     pub fn execute(&self)-> Result<(), Box<dyn Error>> {  // todo properly handle err
 
-        // TODO fork only if it's not a builtin, or pipe etc..
-        match unsafe { fork() } {
-            Ok(ForkResult::Parent { child }) => {
-                waitpid(child, None)?;  
-            }
-            Ok(ForkResult::Child) => {
-                self.execute_recursive()?;
-            }
-            Err(_) => println!("Fork failed"),
-        }
+        // Save the original io fds because it they could be redirected 
+        let saved_stdin = dup(stdin())?;
+        let saved_stdout = dup(stdout())?;
+        let saved_stderr = dup(stderr())?;
+
+        self.execute_recursive()?;
+
+        // Then restore the fds
+        dup2_stdin(saved_stdin)?;
+        dup2_stdout(saved_stdout)?;
+        dup2_stderr(saved_stderr)?;
 
         Ok(())
     }
@@ -73,7 +74,7 @@ impl Command {
 
 }
 
-/// Executes a simple command by REPLACING the current process.
+/// Executes a simple command in a subprocess.
 /// This function does not executes built-in commands (such as pwd or cd)
 fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {  
 
@@ -90,7 +91,16 @@ fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box
     // convert to &[&CStr]
     let argv: Vec<&CStr> = args.iter().map(|c| c.as_c_str()).collect();
 
-    execvp(&cmd, &argv)?;
+
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            waitpid(child, None)?;  
+        }
+        Ok(ForkResult::Child) => {
+            execvp(&cmd, &argv)?;
+        }
+        Err(_) => println!("Fork failed"),
+    }
 
     Ok(())   
 }
