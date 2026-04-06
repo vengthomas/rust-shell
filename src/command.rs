@@ -50,3 +50,42 @@ pub enum RedirectionType {
     Append,   // >>
     Err,      // 2>
 }
+
+impl ToString for RedirectionType {
+    fn to_string(&self) -> String {
+        match &self {
+            RedirectionType::In => "<".to_string(),
+            RedirectionType::Out => ">".to_string(),
+            RedirectionType::Append => ">>".to_string(),
+            RedirectionType::Err => "2>".to_string(),
+        }
+    }
+}
+
+impl ToString for Command {
+    fn to_string(&self) -> String {
+        match &self {
+            Command::Simple { cmd_path, cmd_args } => {
+                format!("{}{}", cmd_path, cmd_args.join(" "))
+            },
+            Command::Pipe { left, right } => {
+                format!("{} | {}", left.to_string(), right.to_string())
+            },
+            Command::Redirection { kind, command, file } => {
+                format!("{} {} {}", command.to_string(), kind.to_string(), file)
+            },
+            Command::Separator { left, right } => {
+                format!("{}; {}", left.to_string(), right.to_string())
+            },
+            Command::LogicalOr { left, right } => {
+                format!("{} || {}", left.to_string(), right.to_string())
+            },
+            Command::LogicalAnd { left, right } => {
+                format!("{} && {}", left.to_string(), right.to_string())
+            },
+            Command::Background { command } => {
+                format!("{} &",command.to_string())
+            },
+        }
+    }
+}
