@@ -3,8 +3,6 @@
 //! 
 //! 
 
-use std::{process::Stdio};
-
 pub mod execution;
 pub mod builtin;
 
@@ -51,32 +49,4 @@ pub enum RedirectionType {
     Out,      // >
     Append,   // >>
     Err,      // 2>
-}
-
-/// Struct containing what stdin should be and where stdout and stderr should go.
-/// It may be used to specify redirections and pipe destinations, and be used for testing
-pub struct IoContext {
-    // pass Stdio as Option to make consuming the ownership easier, 
-    // None represents a IO that will be inherited from parent during execution 
-    pub stdin: Option<Stdio>, 
-    pub stdout: Option<Stdio>,
-    pub stderr: Option<Stdio>,
-}
-
-impl IoContext {
-    
-    pub fn new() -> Self {
-        IoContext { 
-            stdin: None, 
-            stdout: None, 
-            stderr: None 
-        }
-    }
-}
-
-impl Default for IoContext {
-
-    fn default() -> Self {
-        Self::new()
-    }
 }

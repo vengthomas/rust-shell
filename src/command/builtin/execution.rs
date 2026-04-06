@@ -5,7 +5,6 @@
 
 use std::error::Error;
 
-use crate::command::IoContext;
 use crate::command::builtin::*;
 
 
@@ -13,8 +12,8 @@ use crate::command::builtin::*;
 /// Take io_context as a reference and not ownership because we do not want to transform it
 /// 
 /// Returns :
-/// - Ok(Some(())) if `cmd_path` is a built-in command
-/// - Ok(None) else
+/// - Ok(()) if `cmd_path` is a built-in command
+/// - Ok(()) else
 /// - Err(_) if an error occured during execution
 ///  
 pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {
