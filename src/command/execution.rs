@@ -2,7 +2,7 @@
 //! 
 //! 
 
-use std::{error::Error, ffi::{CStr, CString}, io::{stdin, stdout, stderr}, os::fd::AsFd};
+use std::{error::Error, ffi::{CStr, CString}, io::{stdin, stdout, stderr}};
 
 use crate::command::{Command, RedirectionType, builtin::execution::try_execute_builtin};
 use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
@@ -34,13 +34,11 @@ impl Command {
         match self {
             Command::Simple{cmd_path, cmd_args} => {
 
-                // TODO builtin command
-
-                /*if let Ok(()) = try_execute_builtin(cmd_path, cmd_args) { // TODO more detail from builtin error
-                    // Built-in functions are not executed in child processes, so return None
+                if let Ok(Some(())) = try_execute_builtin(cmd_path, cmd_args) { // TODO more detail from builtin error
                     return Ok(());
-                }*/
+                }
 
+                // Executes the command in subprocess if it's not a builtin
                 execute_simple_command(cmd_path, cmd_args)?;
                 Ok(())
             },

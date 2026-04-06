@@ -12,11 +12,11 @@ use crate::command::builtin::*;
 /// Take io_context as a reference and not ownership because we do not want to transform it
 /// 
 /// Returns :
-/// - Ok(()) if `cmd_path` is a built-in command
-/// - Ok(()) else
+/// - Ok(Some(())) if `cmd_path` is a built-in command
+/// - Ok(None) else
 /// - Err(_) if an error occured during execution
 ///  
-pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {
+pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<Option<()>, Box<dyn Error>> {
     
     match cmd_path {
         "exit" => exit_shell(0),
@@ -24,12 +24,12 @@ pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<(), Bo
         "cd" => change_directory(cmd_args.first().ok_or("cd: missing arg")?)?,
         "pwd" => {
             let working_dir = get_working_directory()?;
-            println!("{working_dir}"); // TODO write on io_context.stdout
+            println!("{working_dir}");
         },
         _ => {
-            return Ok(());
+            return Ok(None);
         }
     }
 
-    Ok(())
+    Ok(Some(()))
 }
