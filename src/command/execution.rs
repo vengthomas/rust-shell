@@ -5,7 +5,7 @@
 use std::{error::Error, ffi::{CStr, CString}};
 
 use crate::command::{Command, RedirectionType};
-use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::waitpid}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
+use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
 
 impl Command {
 
@@ -51,10 +51,12 @@ impl Command {
                 Ok(())
             },
             Command::LogicalOr { left, right } => {
-                todo!()
+                execute_logical_command(left, right, false)?;
+                Ok(())
             },
             Command::LogicalAnd { left, right } => {
-                todo!()
+                execute_logical_command(left, right, true)?;
+                Ok(())
             },
             Command::Background { command } => {
                 todo!()
@@ -139,6 +141,33 @@ fn execute_separator_command(left_cmd: &Command, right_cmd: &Command) -> Result<
         Ok(ForkResult::Parent { child }) => {
             waitpid(child, None)?;
             right_cmd.execute_recursive()?;
+        }
+        Ok(ForkResult::Child) => {
+            if let Err(err) = left_cmd.execute_recursive() {
+                eprintln!("Child error: {:?}", err);
+                std::process::exit(1); 
+            }
+            std::process::exit(0);
+        }
+        Err(_) => return Err("Pipe in separator failed".into()),
+    }
+
+    Ok(())
+}
+
+/// Executes the right command depending on if the left command is an exit success
+/// used for && and || commands
+fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_success: bool) -> Result<(), Box<dyn Error>> {
+    
+    // TODO without fork
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            if let Ok(WaitStatus::Exited(_, status_code)) = waitpid(child, None) {
+                if status_code == 0 && continue_on_success ||
+                   status_code != 0 && !continue_on_success {
+                    right_cmd.execute_recursive()?;
+                }
+            }
         }
         Ok(ForkResult::Child) => {
             if let Err(err) = left_cmd.execute_recursive() {
