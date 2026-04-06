@@ -4,7 +4,7 @@
 
 use std::{error::Error, ffi::{CStr, CString}};
 
-use crate::command::{Command, RedirectionType};
+use crate::command::{Command, RedirectionType, builtin::execution::try_execute_builtin};
 use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
 
 impl Command {
@@ -35,6 +35,11 @@ impl Command {
 
                 // TODO builtin command
 
+                /*if let Ok(()) = try_execute_builtin(cmd_path, cmd_args) { // TODO more detail from builtin error
+                    // Built-in functions are not executed in child processes, so return None
+                    return Ok(());
+                }*/
+
                 execute_simple_command(cmd_path, cmd_args)?;
                 Ok(())
             },
@@ -59,7 +64,8 @@ impl Command {
                 Ok(())
             },
             Command::Background { command } => {
-                todo!()
+                execute_background_command(command)?;
+                Ok(())
             }
             
         }
@@ -180,6 +186,27 @@ fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_
     }
 
     Ok(())
+}
+
+fn execute_background_command(command: &Command) -> Result<Option<()>, Box<dyn Error>> {
+    
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child }) => {
+            // TODO add the pid to jobs
+        }
+        Ok(ForkResult::Child) => {
+            match command.execute_recursive() {
+                Ok(_) => std::process::exit(0),
+                Err(err) => {
+                    eprintln!("Error: {:?}", err);
+                    std::process::exit(1);
+                }
+            }
+        }
+        Err(_) => return Err("Pipe in separator failed".into()),
+    }
+
+    Ok(None)    // TODO wait without blocking to avoid zombie processes
 }
 
 /*impl Command {

@@ -8,6 +8,10 @@ use crate::cli::terminal_interaction::TerminalInteraction;
 use crate::command::builtin::exit_shell;
 use crate::command_analysis::convert_to_command;
 
+use nix::sys::wait::{WaitPidFlag, WaitStatus};
+use nix::unistd::Pid;
+use nix::{fcntl::{OFlag,open}, sys::{wait::{waitpid}}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
+
 pub fn run_cli() {
 
     let mut terminal = TerminalInteraction::try_new().expect("error terminal interaction creation");
@@ -47,6 +51,15 @@ pub fn cli_loop_step(terminal: &mut dyn Interaction) -> Result<(), Box<dyn Error
             println!("exit");
             exit_shell(0)
         },
+    }
+
+    // TODO manage zombies in jobs manager
+    match waitpid(Pid::from_raw(-1), Some(WaitPidFlag::WNOHANG)) {
+        Ok(WaitStatus::Exited(_, _)) => (),
+        Ok(WaitStatus::Signaled(_, _, _)) => (),
+        Ok(WaitStatus::StillAlive) => (),
+        Err(_) => (),
+        _ => (),
     }
 
     Ok(())
