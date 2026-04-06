@@ -10,7 +10,7 @@ use crate::command_analysis::convert_to_command;
 
 use nix::sys::wait::{WaitPidFlag, WaitStatus};
 use nix::unistd::Pid;
-use nix::{fcntl::{OFlag,open}, sys::{wait::{waitpid}}, unistd::{ForkResult, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
+use nix::{sys::{wait::{waitpid}}};
 
 pub fn run_cli() {
 

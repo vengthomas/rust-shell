@@ -40,35 +40,31 @@ impl Command {
 
                 // Executes the command in subprocess if it's not a builtin
                 execute_simple_command(cmd_path, cmd_args)?;
-                Ok(())
             },
             Command::Redirection { kind, command, file } => {
                 execute_redirection_command(kind, command, file)?;
-                Ok(())
             },
             Command::Pipe { left, right } => {
                 execute_pipe_command(left, right)?;
-                Ok(())
             },
             Command::Separator { left, right } => {
                 execute_separator_command(left, right)?;
-                Ok(())
             },
             Command::LogicalOr { left, right } => {
                 execute_logical_command(left, right, false)?;
-                Ok(())
             },
             Command::LogicalAnd { left, right } => {
                 execute_logical_command(left, right, true)?;
-                Ok(())
             },
             Command::Background { command } => {
                 execute_background_command(command)?;
-                Ok(())
             }
             
-        }
+        };
+        
+        Ok(())
     }
+    
 
 }
 
