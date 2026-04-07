@@ -13,7 +13,7 @@ use crate::command_analysis::convert_to_command;
 pub fn run_cli() {
 
     let mut terminal = TerminalInteraction::try_new().expect("error terminal interaction creation");
-    let mut jobs_manager = JobsManager::new();
+    let mut jobs_manager = JobsManager::default();
 
     println!(" ____            _     ____  _          _ _ ");
     println!("|  _ \\ _   _ ___| |_  / ___|| |__   ___| | |");

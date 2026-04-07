@@ -1,6 +1,4 @@
 
-use std::fmt::Display;
-
 use nix::errno::Errno;
 use nix::sys::wait::{WaitPidFlag};
 use nix::unistd::Pid;
@@ -8,6 +6,11 @@ use nix::{sys::{wait::{waitpid, WaitStatus}}};
 
 use crate::command::Command;
 
+/// Struct containing the background jobs
+/// 
+/// Invariants: 
+/// - The last background job has always the highest value
+/// 
 #[derive(Default, Debug)]
 pub struct JobsManager {
     background_jobs: Vec<Job>
@@ -21,6 +24,7 @@ pub struct Job {
     state: State,
 }
 
+/// Represents a job execution state
 #[derive(Debug)]
 pub enum State {
     Running,
@@ -29,15 +33,11 @@ pub enum State {
     Killed
 }
 
-// TODO docs
-
 impl JobsManager {
 
-    pub fn new() -> Self {
-        JobsManager::default()
-    }
-
-    /// side effect TODO DOC
+    /// Adds a new background job to the manager
+    /// 
+    /// Side effect: prints in the console the newly added job
     pub fn add_background_job(&mut self, command: &Command, pid: i32) {
 
         let job_number = self.last_job_number();
@@ -55,6 +55,9 @@ impl JobsManager {
         
     }
 
+    /// Returns the next job number based on the last job in `background_jobs`.
+    ///
+    /// Precondition: `background_jobs` is sorted by insertion order
     fn last_job_number(&self) -> usize {
         match self.background_jobs.last() {
             Some(latest_job) => latest_job.job_number+1,
@@ -62,10 +65,11 @@ impl JobsManager {
         }
     }
 
-    /// Temporary function, should clean zombies with SIGCHLD signal handling
-    /// non blocking polling to cleanup zombie processes from background jobs when they are done
+    // Temporary function, should clean zombies with SIGCHLD signal handling
+    /// Cleans up the zombie processes with non-blocking polling.
+    /// Update the background jobs list if the zombie is a background job
     /// 
-    /// side effect TODO DOC
+    /// Side effect: prints to stdout the removed job(s?)
     pub fn clean_done_jobs(&mut self) {
 
         // TODO while loop to clean all zombies once
@@ -96,13 +100,18 @@ impl JobsManager {
         }
     }
 
-    fn remove_background_job(&mut self, pid: i32) -> Result<Job, ()> { // Ok(removed_job) or err if not found
+    /// Removes in the list the job with corresponding `pid` and 
+    /// 
+    /// Returns either:
+    /// - Ok(removed_job) if the removal is successful
+    /// - Err(()) if job with `pid` was not found
+    fn remove_background_job(&mut self, pid: i32) -> Result<Job, ()> { 
 
         if let Some(pos) = self.background_jobs.iter().position(|e| e.pid == pid) {
             let removed_job = self.background_jobs.remove(pos);
             Ok(removed_job)
         } else {
-            Err(())
+            Err(()) 
         }
     }
 }
