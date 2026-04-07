@@ -3,6 +3,8 @@
 //! 
 //! 
 
+use std::fmt::Display;
+
 pub mod execution;
 pub mod builtin;
 pub mod jobs;
@@ -52,40 +54,42 @@ pub enum RedirectionType {
     Err,      // 2>
 }
 
-impl ToString for RedirectionType {
-    fn to_string(&self) -> String {
+impl Display for RedirectionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            RedirectionType::In => "<".to_string(),
-            RedirectionType::Out => ">".to_string(),
-            RedirectionType::Append => ">>".to_string(),
-            RedirectionType::Err => "2>".to_string(),
+            RedirectionType::In => write!(f, "<"),
+            RedirectionType::Out => write!(f, ">"),
+            RedirectionType::Append => write!(f, ">>"),
+            RedirectionType::Err => write!(f, "2>"),
         }
     }
 }
 
-impl ToString for Command {
-    fn to_string(&self) -> String {
+impl Display for Command {
+
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        
         match &self {
             Command::Simple { cmd_path, cmd_args } => {
-                format!("{}{}", cmd_path, cmd_args.join(" "))
+                write!(f, "{}{}", cmd_path, cmd_args.join(" "))
             },
             Command::Pipe { left, right } => {
-                format!("{} | {}", left.to_string(), right.to_string())
+                write!(f, "{} | {}", left.to_string(), right.to_string())
             },
             Command::Redirection { kind, command, file } => {
-                format!("{} {} {}", command.to_string(), kind.to_string(), file)
+                write!(f, "{} {} {}", command.to_string(), kind.to_string(), file)
             },
             Command::Separator { left, right } => {
-                format!("{}; {}", left.to_string(), right.to_string())
+                write!(f, "{}; {}", left.to_string(), right.to_string())
             },
             Command::LogicalOr { left, right } => {
-                format!("{} || {}", left.to_string(), right.to_string())
+                write!(f, "{} || {}", left.to_string(), right.to_string())
             },
             Command::LogicalAnd { left, right } => {
-                format!("{} && {}", left.to_string(), right.to_string())
+                write!(f, "{} && {}", left.to_string(), right.to_string())
             },
             Command::Background { command } => {
-                format!("{} &",command.to_string())
+                write!(f, "{} &",command.to_string())
             },
         }
     }
