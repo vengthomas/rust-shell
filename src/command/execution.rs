@@ -4,7 +4,7 @@
 
 use std::{error::Error, ffi::{CStr, CString}, io::{stdin, stdout, stderr}};
 
-use crate::command::{Command, RedirectionType, builtin::execution::try_execute_builtin};
+use crate::command::{Command, RedirectionType, builtin::execution::try_execute_builtin, jobs::JobsManager};
 use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, unistd::{ForkResult, dup, dup2_stderr, dup2_stdin, dup2_stdout, execvp, fork, pipe}};
 
 impl Command {
@@ -12,14 +12,14 @@ impl Command {
     /// Executes the command
     /// 
     /// 
-    pub fn execute(&self)-> Result<(), Box<dyn Error>> {  // todo properly handle err
+    pub fn execute(&self, jobs_manager: &mut JobsManager)-> Result<(), Box<dyn Error>> {  // todo properly handle err
 
         // Save the original io fds because it they could be redirected 
         let saved_stdin = dup(stdin())?;
         let saved_stdout = dup(stdout())?;
         let saved_stderr = dup(stderr())?;
 
-        self.execute_recursive()?;
+        self.execute_recursive(jobs_manager)?;
 
         // Then restore the fds
         dup2_stdin(saved_stdin)?;
@@ -29,7 +29,7 @@ impl Command {
         Ok(())
     }
     
-    fn execute_recursive(&self) -> Result<(), Box<dyn Error>>{
+    fn execute_recursive(&self, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>>{
         
         match self {
             Command::Simple{cmd_path, cmd_args} => {
@@ -39,25 +39,25 @@ impl Command {
                 }
 
                 // Executes the command in subprocess if it's not a builtin
-                execute_simple_command(cmd_path, cmd_args)?;
+                execute_simple_command(cmd_path, cmd_args, jobs_manager)?;
             },
             Command::Redirection { kind, command, file } => {
-                execute_redirection_command(kind, command, file)?;
+                execute_redirection_command(kind, command, file, jobs_manager)?;
             },
             Command::Pipe { left, right } => {
-                execute_pipe_command(left, right)?;
+                execute_pipe_command(left, right, jobs_manager)?;
             },
             Command::Separator { left, right } => {
-                execute_separator_command(left, right)?;
+                execute_separator_command(left, right, jobs_manager)?;
             },
             Command::LogicalOr { left, right } => {
-                execute_logical_command(left, right, false)?;
+                execute_logical_command(left, right, false, jobs_manager)?;
             },
             Command::LogicalAnd { left, right } => {
-                execute_logical_command(left, right, true)?;
+                execute_logical_command(left, right, true, jobs_manager)?;
             },
             Command::Background { command } => {
-                execute_background_command(command)?;
+                execute_background_command(command, jobs_manager)?;
             }
             
         };
@@ -70,7 +70,7 @@ impl Command {
 
 /// Executes a simple command in a subprocess.
 /// This function does not executes built-in commands (such as pwd or cd)
-fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box<dyn Error>> {  
+fn execute_simple_command(cmd_path: &str, cmd_args: &[String], jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {  
 
     // TODO less chaotic conversions 
     let cmd = CString::new(cmd_path)?;
@@ -99,7 +99,7 @@ fn execute_simple_command(cmd_path: &str, cmd_args: &[String]) -> Result<(), Box
     Ok(())   
 }
 
-fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_path: &str) -> Result<(), Box<dyn Error>> {
+fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_path: &str, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {
 
     // Select the options creation/read depending on the kind 
     let open_flags = match kind {
@@ -117,12 +117,12 @@ fn execute_redirection_command(kind: &RedirectionType, command: &Command, file_p
     };
     
     // Then execute the command with redirected input or output
-    command.execute_recursive()?;
+    command.execute_recursive(jobs_manager)?;
 
     Ok(())
 }
 
-fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), Box<dyn Error>> {
+fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {
 
     let (pipe_fd_read, pipe_fd_write) = pipe()?;
 
@@ -131,13 +131,13 @@ fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), B
             
             dup2_stdout(pipe_fd_write)?;
 
-            left_cmd.execute_recursive()?;
+            left_cmd.execute_recursive(jobs_manager)?;
             waitpid(child, None)?;  
         }
         Ok(ForkResult::Child) => {
             dup2_stdin(pipe_fd_read)?;
             // TODO make sure to wait for the parent for dup2  
-            right_cmd.execute_recursive()?;
+            right_cmd.execute_recursive(jobs_manager)?;
         }
         Err(_) => println!("Pipe fork failed"),
     }
@@ -145,15 +145,15 @@ fn execute_pipe_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), B
     Ok(())
 }
 
-fn execute_separator_command(left_cmd: &Command, right_cmd: &Command) -> Result<(), Box<dyn Error>> {
+fn execute_separator_command(left_cmd: &Command, right_cmd: &Command, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {
     
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
             waitpid(child, None)?;
-            right_cmd.execute_recursive()?;
+            right_cmd.execute_recursive(jobs_manager)?;
         }
         Ok(ForkResult::Child) => {
-            if let Err(err) = left_cmd.execute_recursive() {
+            if let Err(err) = left_cmd.execute_recursive(jobs_manager) {
                 eprintln!("Child error: {:?}", err);
                 std::process::exit(1); 
             }
@@ -167,7 +167,7 @@ fn execute_separator_command(left_cmd: &Command, right_cmd: &Command) -> Result<
 
 /// Executes the right command depending on if the left command is an exit success
 /// used for && and || commands
-fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_success: bool) -> Result<(), Box<dyn Error>> {
+fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_success: bool, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {
     
     // TODO without fork
     match unsafe { fork() } {
@@ -175,12 +175,12 @@ fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_
             if let Ok(WaitStatus::Exited(_, status_code)) = waitpid(child, None) {
                 if status_code == 0 && continue_on_success ||
                    status_code != 0 && !continue_on_success {
-                    right_cmd.execute_recursive()?;
+                    right_cmd.execute_recursive(jobs_manager)?;
                 }
             }
         }
         Ok(ForkResult::Child) => {
-            if let Err(err) = left_cmd.execute_recursive() {
+            if let Err(err) = left_cmd.execute_recursive(jobs_manager) {
                 eprintln!("Child error: {:?}", err);
                 std::process::exit(1); 
             }
@@ -192,14 +192,15 @@ fn execute_logical_command(left_cmd: &Command, right_cmd: &Command, continue_on_
     Ok(())
 }
 
-fn execute_background_command(command: &Command) -> Result<(), Box<dyn Error>> {
+fn execute_background_command(command: &Command, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>> {
     
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
             // TODO add the pid to jobs
+            jobs_manager.add_background_job(command, child.as_raw());
         }
         Ok(ForkResult::Child) => {
-            match command.execute_recursive() {
+            match command.execute_recursive(jobs_manager) {
                 Ok(_) => std::process::exit(0),
                 Err(err) => {
                     eprintln!("Error: {:?}", err);

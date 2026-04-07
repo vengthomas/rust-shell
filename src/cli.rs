@@ -29,20 +29,16 @@ pub fn run_cli() {
 }
 
 /// Processes a single step on a loop
-pub fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>>{
+fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>>{
 
-    let user_input = terminal.receive_input()
-        // Propagate the error by specifying it is a user input error
-        .map_err(|e| Box::<dyn std::error::Error>::from(format!("Input error: {}", e)))?;
+    let user_input = terminal.receive_input()?;
 
     match user_input {
         UserInput::String(input_string) => {
             
-            let input_command = convert_to_command(&input_string)
-                .map_err(|e| Box::<dyn std::error::Error>::from(format!("Parsing error: {}", e)))?;
-            
-            input_command.execute()
-                .map_err(|e| Box::<dyn std::error::Error>::from(format!("Execution error: {}", e)))?; 
+            let input_command = convert_to_command(&input_string)?;
+
+            input_command.execute(jobs_manager)?; 
 
         },
         UserInput::NoSpecialInput => (), // If no special input, ignore it
@@ -52,6 +48,7 @@ pub fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsMana
         },
     }
 
+    //println!("{:?}",jobs_manager.background_jobs); // debug
     jobs_manager.clean_done_jobs();
 
     Ok(())

@@ -11,7 +11,7 @@ pub mod jobs;
 /// 
 /// This enum represents the abstract syntax tree of a shell command created by the parsing module.
 /// 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Command {
     Simple {
         cmd_path: String,
