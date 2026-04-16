@@ -64,3 +64,11 @@ $ /home/folder> exit
 
 - `Logos` for lexing
 - `Nix` for advanced commands execution
+
+### Next features 
+
+- [ ] Jobs management  (fd, bg, jobs)
+- [ ] Signal handling for running commands
+- [ ] Environment variables  (echo, $PATH, $?, $VAR etc..)
+- [ ] Prompt string with git infos
+- [ ] Command auto-completion and suggestion
