@@ -28,7 +28,7 @@ pub fn run_cli() {
     }
 }
 
-/// Processes a single step on a loop
+/// Processes a single loop step 
 fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsManager) -> Result<(), Box<dyn Error>>{
 
     let user_input = terminal.receive_input()?;
