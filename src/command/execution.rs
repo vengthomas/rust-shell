@@ -9,8 +9,21 @@ use nix::{fcntl::{OFlag,open}, sys::{stat::Mode, wait::{WaitStatus, waitpid}}, u
 
 impl Command {
 
-    /// Executes the command
+    /// Executes a command
     /// 
+    /// Side effects: 
+    /// - Adds a job to the jobs_manager if a background subcommand is executed
+    /// - May spawn child processes
+    /// - Temporarily replaces stdin/stdout/stderr during execution
+    /// 
+    /// # Errors
+    /// Returns an Error if
+    /// - Command execution fails 
+    /// - IO error during redirection or pipe setup
+    /// 
+    /// Note: stdin/stdout/stderr are restored after execution, 
+    /// This function is not safe to use concurrently because it temporarily
+    /// replaces process-wide stdin/stdout/stderr file descriptors.
     /// 
     pub fn execute(&self, jobs_manager: &mut JobsManager)-> Result<(), Box<dyn Error>> {  // todo properly handle err
 

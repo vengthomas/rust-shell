@@ -38,7 +38,26 @@ pub enum Token {
 }
 
 
-/// Converts an input string into a vec of tokens
+/// Converts an input string into a sequence of tokens
+/// 
+/// The lexer does not validate that the input is a valid shell command.
+/// It only converts the input string into a sequence of tokens.
+/// 
+/// Note: 
+/// The Word token can represent both commands and arguments.
+/// 
+/// # Example
+/// ```
+/// use rust_shell::command_analysis::{lexing::Token, lexing::tokenize_input};
+/// 
+/// let input = "ls / | cat".to_string();
+/// let result = tokenize_input(&input);
+///
+/// let expected = vec![Token::Word("ls".into()), Token::Word("/".into()), Token::Pipe, Token::Word("cat".into())];
+///
+/// assert_eq!(expected, result);
+/// ```
+/// 
 pub fn tokenize_input(input: &str) -> Vec<Token> { 
 
     let mut tokens: Vec<Token> = Vec::new();

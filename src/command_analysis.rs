@@ -2,8 +2,8 @@
 //! This module processes the input text (entered by the user) and produces an AST
 //! 
 
-mod lexing;
-mod parsing;
+pub mod lexing;
+pub mod parsing;
 
 use crate::command::Command;
 

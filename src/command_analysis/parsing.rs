@@ -6,6 +6,41 @@ use crate::command::RedirectionType;
 
 use super::lexing::Token;
 
+
+
+/// Parse a token sequence representing a command into its resulting AST
+/// 
+/// The AST represents a structured shell command used for execution.
+/// 
+/// # Errors
+/// Returns a ParsingError if 
+/// - the token sequence is incomplete
+/// - the token sequence does not match the shell grammar
+/// - an unexpected token is encountered
+/// 
+/// # Example 
+/// ``` 
+/// use rust_shell::command::Command;
+/// use rust_shell::command_analysis::{parsing::parse, lexing::Token};
+/// 
+/// let input = vec![Token::Word("ls".into()), Token::Word("/".into()), Token::Pipe, Token::Word("cat".into())];
+/// let result = parse(&input).unwrap();
+///
+/// assert_eq!(
+///     Command::Pipe { 
+///         left: Box::new(Command::Simple {
+///             cmd_path: "ls".to_string(), 
+///             cmd_args: vec!["/".to_string()] 
+///         }),
+///         right: Box::new(Command::Simple {
+///             cmd_path: "cat".to_string(), 
+///             cmd_args: vec![]
+///         })
+///     }, 
+///     result
+/// );
+/// ```
+/// 
 pub fn parse(tokens: &[Token]) -> Result<Command, ParsingError> {
 
     let mut visited_tokens: Vec<Token> = Vec::new();
