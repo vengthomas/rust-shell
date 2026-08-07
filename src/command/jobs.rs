@@ -4,6 +4,8 @@ use nix::sys::wait::{WaitPidFlag};
 use nix::unistd::Pid;
 use nix::{sys::{wait::{waitpid, WaitStatus}}};
 
+use std::fmt;
+
 use crate::command::Command;
 
 /// Struct containing the background jobs
@@ -22,6 +24,12 @@ pub struct Job {
     pid: i32,
     command: Command,
     state: State,
+}
+
+impl fmt::Display for Job {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}] {:?}\t{} &", self.job_number, self.state, self.command)
+    }
 }
 
 /// Represents a job execution state
@@ -53,6 +61,11 @@ impl JobsManager {
 
         self.background_jobs.push(job);
         
+    }
+
+    /// Returns the active background jobs as a read-only list
+    pub fn active_jobs(&self) -> &Vec<Job> {
+        &self.background_jobs
     }
 
     /// Returns the next job number based on the last job in `background_jobs`.

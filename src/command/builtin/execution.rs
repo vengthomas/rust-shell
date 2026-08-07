@@ -6,7 +6,7 @@
 use std::error::Error;
 
 use crate::command::builtin::*;
-
+use crate::command::jobs::JobsManager;
 
 /// Attempts to execute the command if the `cmd_path` is built-in command
 /// Take io_context as a reference and not ownership because we do not want to transform it
@@ -16,7 +16,7 @@ use crate::command::builtin::*;
 /// - Ok(None) else
 /// - Err(_) if an error occured during execution
 ///  
-pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<Option<()>, Box<dyn Error>> {
+pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String], jobs_manager: &JobsManager) -> Result<Option<()>, Box<dyn Error>> {
     
     match cmd_path {
         "exit" => exit_shell(0),
@@ -26,6 +26,9 @@ pub fn try_execute_builtin(cmd_path: &str, cmd_args: &[String]) -> Result<Option
             let working_dir = get_working_directory()?;
             println!("{working_dir}");
         },
+        "jobs" => {
+            print_active_jobs(jobs_manager);
+        }
         _ => {
             return Ok(None);
         }

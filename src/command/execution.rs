@@ -47,7 +47,7 @@ impl Command {
         match self {
             Command::Simple{cmd_path, cmd_args} => {
 
-                if let Ok(Some(())) = try_execute_builtin(cmd_path, cmd_args) { // TODO more detail from builtin error
+                if let Ok(Some(())) = try_execute_builtin(cmd_path, cmd_args, jobs_manager) { // TODO more detail from builtin error
                     return Ok(());
                 }
 

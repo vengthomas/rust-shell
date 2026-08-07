@@ -47,8 +47,7 @@ fn cli_loop_step(terminal: &mut dyn Interaction, jobs_manager: &mut JobsManager)
             exit_shell(0)
         },
     }
-
-    //println!("{:?}",jobs_manager.background_jobs); // debug
+    
     jobs_manager.clean_done_jobs();
 
     Ok(())

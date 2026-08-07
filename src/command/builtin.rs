@@ -5,6 +5,7 @@
 
 pub mod execution;
 
+use crate::command::jobs::JobsManager;
 
 // utils for builtin commands
 pub fn exit_shell(exit_code: i32) {
@@ -24,6 +25,13 @@ pub fn get_working_directory() -> Result<String, Box<dyn std::error::Error>> {
     let path = std::env::current_dir()?;
     Ok(path.to_string_lossy().into_owned())
 }
+
+pub fn print_active_jobs(jobs_manager: &JobsManager) {
+
+    for job in jobs_manager.active_jobs().iter() {
+        println!("{}", job);
+    }
+} 
 
 
 #[cfg(test)]

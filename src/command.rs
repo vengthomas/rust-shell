@@ -71,7 +71,7 @@ impl Display for Command {
         
         match &self {
             Command::Simple { cmd_path, cmd_args } => {
-                write!(f, "{}{}", cmd_path, cmd_args.join(" "))
+                write!(f, "{} {}", cmd_path, cmd_args.join(" "))
             },
             Command::Pipe { left, right } => {
                 write!(f, "{} | {}", left.to_string(), right.to_string())
